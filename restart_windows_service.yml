@@ -1,0 +1,42 @@
+---
+- name: Restart Windows Service
+  hosts: all
+  gather_facts: no
+  
+  tasks:
+    - name: Display service being restarted
+      ansible.builtin.debug:
+        msg: "Attempting to restart service: {{ service_name }}"
+    
+    - name: Get service status before restart
+      ansible.windows.win_service:
+        name: "{{ service_name }}"
+      register: service_before
+      
+    - name: Restart the service
+      ansible.windows.win_service:
+        name: "{{ service_name }}"
+        state: restarted
+      register: service_restart
+      
+    - name: Wait for service to be running
+      ansible.windows.win_service:
+        name: "{{ service_name }}"
+      register: service_after
+      until: service_after.state == "running"
+      retries: 5
+      delay: 3
+      
+    - name: Log the restart event
+      ansible.windows.win_shell: |
+        $logEntry = @"
+        $(Get-Date -Format "yyyy-MM-dd HH:mm:ss") - Service {{ service_name }} was automatically restarted by EDA
+        Previous State: {{ service_before.state }}
+        Current State: {{ service_after.state }}
+        "@
+        Add-Content -Path "C:\Temp\eda_service_restarts.log" -Value $logEntry
+      ignore_errors: yes
+      
+    - name: Display result
+      ansible.builtin.debug:
+        msg: "Service {{ service_name }} is now {{ service_after.state }}"
