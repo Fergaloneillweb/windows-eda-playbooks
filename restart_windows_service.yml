@@ -3,6 +3,9 @@
   hosts: all
   gather_facts: no
   
+  vars:
+    service_name: Spooler
+  
   tasks:
     - name: Display service being restarted
       ansible.builtin.debug:
